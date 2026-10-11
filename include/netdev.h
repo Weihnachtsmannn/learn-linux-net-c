@@ -1,11 +1,10 @@
 #ifndef NETDEV_H
 #define NETDEV_H
-#include <stdint.h>
+
 #include "ethernet.h"
-// #include "skbuff.h"
+#include "list.h"
 #include "syshead.h"
 #include "utils.h"
-#include "list.h"
 
 #define BUFLEN 1600
 #define MAX_ADDR_LEN 32
@@ -15,17 +14,17 @@
                 print_debug("NETDEV: " fmt, ##args);                           \
         } while (0)
 
-struct sk_buff;
-struct netdev_ops {
+struct sk_buff; // #include "skbuff.h"
+struct netdev_protocol {
         uint16_t ethertype; /* 主机字节序 */
-        int (*handler)(struct sk_buff *skb);
+        int (*on_rcv)(struct sk_buff *skb);
 
         /* 这里用链表保存 EtherType 与处理函数的对应关系，
            避免为 16 位 EtherType分配一个 65536 项数组。 */
         struct list_head list;
 };
 
-int netdev_register(struct netdev_ops *ops);
+int netdev_register_protocol(struct netdev_protocol *ops);
 
 struct netdev {
         uint32_t addr;

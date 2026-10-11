@@ -1,21 +1,18 @@
-#include "arp.h"
-
 #include "ip.h"
+#include "netdev.h"
 #include "skbuff.h"
 #include "syshead.h"
-// #include "tcp.h" 3.
-// #include "icmpv4.h"
 #include "utils.h"
 
-// 4.
 #define IP_PROTOCOL_COUNT 256
-static const struct ip_ops *ip_handlers[IP_PROTOCOL_COUNT];
+static const struct ip_ops *ip_operations[IP_PROTOCOL_COUNT];
+
 static int ip_dispatch(struct sk_buff *skb, unsigned int proto) {
         const struct ip_ops *ops;
         if (proto >= IP_PROTOCOL_COUNT)
                 return -1;
 
-        ops = ip_handlers[proto];
+        ops = ip_operations[proto];
         if (ops && ops->handler) {
                 ops->handler(skb);
                 return 0;
@@ -29,10 +26,10 @@ int ip_register_handler(unsigned int proto, const struct ip_ops *ops) {
                 return -1;
 
         /* Check if a handler is already registered for this protocol */
-        if (ip_handlers[proto])
+        if (ip_operations[proto])
                 return -1;
 
-        ip_handlers[proto] = ops;
+        ip_operations[proto] = ops;
         return 0;
 }
 
@@ -106,9 +103,9 @@ drop_pkt:
         return 0;
 }
 
-static struct netdev_ops ip_ops = {
+static struct netdev_protocol netdev_ip_proto = {
     .ethertype = ETH_P_IP,
-    .handler = ip_rcv,
+    .on_rcv = ip_rcv,
 };
 
-int ip_init(void) { return netdev_register(&ip_ops); }
+int ip_init(void) { return netdev_register_protocol(&netdev_ip_proto); }

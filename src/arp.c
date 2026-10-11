@@ -67,12 +67,12 @@ static int update_arp_translation_table(struct arp_hdr *hdr,
         return 0;
 }
 
-static struct netdev_ops arp_ops = {
+static struct netdev_protocol netdev_arp_proto = {
     .ethertype = ETH_P_ARP,
-    .handler = arp_rcv,
+    .on_rcv = arp_rcv,
 };
 
-void arp_init(void) { netdev_register(&arp_ops); }
+void arp_init(void) { netdev_register_protocol(&netdev_arp_proto); }
 
 /**
  * @brief 处理接收到的ARP请求报文，更新ARP缓存并根据请求类型生成响应。

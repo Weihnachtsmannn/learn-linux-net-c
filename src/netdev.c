@@ -12,16 +12,16 @@
 
 static LIST_HEAD(protocol_list);
 
-int netdev_register(struct netdev_ops *ops) {
+int netdev_register_protocol(struct netdev_protocol *ops) {
         struct list_head *item;
-        struct netdev_ops *entry;
+        struct netdev_protocol *entry;
 
-        if (!ops || !ops->handler)
+        if (!ops || !ops->on_rcv)
                 return -1;
 
         /* 检查 EtherType 是否已经注册 */
         list_for_each(item, &protocol_list) {
-                entry = list_entry(item, struct netdev_ops, list);
+                entry = list_entry(item, struct netdev_protocol, list);
 
                 if (entry->ethertype == ops->ethertype)
                         return -1;
@@ -90,7 +90,7 @@ int netdev_transmit(struct sk_buff *skb, uint8_t *dst_hw, uint16_t ethertype) {
 static void netdev_receive(struct sk_buff *skb) {
         struct eth_hdr *hdr = eth_hdr(skb);
         struct list_head *item;
-        struct netdev_ops *ops;
+        struct netdev_protocol *ops;
         eth_dbg("in", hdr);
 
         // switch (hdr->ethertype) {
@@ -108,10 +108,10 @@ static void netdev_receive(struct sk_buff *skb) {
         // }
 
         list_for_each(item, &protocol_list) {
-                ops = list_entry(item, struct netdev_ops, list);
+                ops = list_entry(item, struct netdev_protocol, list);
 
                 if (ops->ethertype == hdr->ethertype) {
-                        ops->handler(skb);
+                        ops->on_rcv(skb);
                         return;
                 }
         }
