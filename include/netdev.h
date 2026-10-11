@@ -32,7 +32,6 @@ struct netdev {
         uint8_t addr_len;
         uint8_t hwaddr[6];
         uint32_t mtu;
-        struct netdev_ops *ops;
 };
 
 void netdev_init();
