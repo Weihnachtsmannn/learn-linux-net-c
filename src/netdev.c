@@ -10,21 +10,26 @@
 // #include "arp.h"
 // #include "ip.h"
 
-static struct netdev_ops *netdev_list;
+static LIST_HEAD(protocol_list);
+
 int netdev_register(struct netdev_ops *ops) {
-        struct netdev_ops *item;
+        struct list_head *item;
+        struct netdev_ops *entry;
+
         if (!ops || !ops->handler)
                 return -1;
 
-        /* 已经注册过该ethertype */
-        for (item = netdev_list; item; item = item->next) {
-                if (item->ethertype == ops->ethertype) {
+        /* 检查 EtherType 是否已经注册 */
+        list_for_each(item, &protocol_list) {
+                entry = list_entry(item, struct netdev_ops, list);
+
+                if (entry->ethertype == ops->ethertype)
                         return -1;
-                }
         }
 
-        ops->next = netdev_list;
-        netdev_list = ops;
+        list_init(&ops->list);
+        list_add_tail(&ops->list, &protocol_list);
+
         return 0;
 }
 
@@ -84,7 +89,8 @@ int netdev_transmit(struct sk_buff *skb, uint8_t *dst_hw, uint16_t ethertype) {
 
 static void netdev_receive(struct sk_buff *skb) {
         struct eth_hdr *hdr = eth_hdr(skb);
-        struct netdev_ops *item;
+        struct list_head *item;
+        struct netdev_ops *ops;
         eth_dbg("in", hdr);
 
         // switch (hdr->ethertype) {
@@ -101,9 +107,11 @@ static void netdev_receive(struct sk_buff *skb) {
         //         break;
         // }
 
-        for (item = netdev_list; item; item = item->next) {
-                if (item->ethertype == hdr->ethertype) {
-                        item->handler(skb);
+        list_for_each(item, &protocol_list) {
+                ops = list_entry(item, struct netdev_ops, list);
+
+                if (ops->ethertype == hdr->ethertype) {
+                        ops->handler(skb);
                         return;
                 }
         }
